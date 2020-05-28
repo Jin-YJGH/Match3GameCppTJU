@@ -169,20 +169,6 @@ void PlayLayer::checkAndClear()
 
 void PlayLayer::checkAndClearBoardOfIndex()
 {
-	//needed modified to dfs searching
-
-	/*
-	int** leftCubesOfCube = new int* [_numBoardRows];
-	int** rightCubesOfCube = new int* [_numBoardRows];
-	int** upCubesOfCube = new int* [_numBoardRows];
-	int** downCubesOfCube = new int* [_numBoardRows];
-	for (int r = 0; r < _numBoardRows; r++) {
-		leftCubesOfCube[r] = new int[_numBoardCols] {0};
-		rightCubesOfCube[r] = new int[_numBoardCols] {0};
-		upCubesOfCube[r] = new int[_numBoardCols] {0};
-		downCubesOfCube[r] = new int[_numBoardCols] {0};
-	}
-	*/
 
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
@@ -190,14 +176,6 @@ void PlayLayer::checkAndClearBoardOfIndex()
 				continue;
 			}
 
-			/*
-			leftCubesOfCube[r][c] = numOfCubesLeftChain(r, c);
-			rightCubesOfCube[r][c] = numOfCubesRightChain(r, c);
-			upCubesOfCube[r][c] = numOfCubesUpChain(r, c);
-			downCubesOfCube[r][c] = numOfCubesDownChain(r, c);
-			*/
-
-			
 			int leftCubes = numOfCubesLeftChain(r, c);
 			int rightCubes = numOfCubesRightChain(r, c);
 			int upCubes = numOfCubesUpChain(r, c);
@@ -205,8 +183,6 @@ void PlayLayer::checkAndClearBoardOfIndex()
 
 			int rowCubes = leftCubes + rightCubes + 1;
 			int colCubes = upCubes + downCubes + 1;
-			
-
 			
 			if (rowCubes < 3 && colCubes < 3) {
 				continue;
