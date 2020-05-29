@@ -9,17 +9,23 @@ USING_NS_CC;
 #define TOTAL_CUBE (4)
 #define EMPTY (-1)
 
+static const char* cubeSprites[TOTAL_CUBE] =
+{
+	"cube1.png",
+	"cube2.png",
+	"cube3.png",
+	"cube4.png"
+};
+
 class CubeSprite : public Sprite
 {
 public:
 	CubeSprite();
-	static CubeSprite* create(int row, int col, int index);
 	static float getCubeLength();
 
 	CC_SYNTHESIZE(int, _row, Row);
 	CC_SYNTHESIZE(int, _col, Col);
 	CC_SYNTHESIZE(int, _imgIndex, ImgIndex);
-	//CC_SYNTHESIZE(bool, _isNeedRemove, IsNeedRemove);
 
 };
 #endif // !__CUBE_SPRITE_H__

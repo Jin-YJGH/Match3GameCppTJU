@@ -25,10 +25,23 @@ PlayLayer::PlayLayer()
 PlayLayer::~PlayLayer()
 {
 	if (_boardOfIndex) {
-		delete (_boardOfIndex);
+		for (int r = 0; r < _numBoardRows; r++) {
+			delete[] _boardOfIndex[r];
+			_boardOfIndex[r] = NULL;
+		}
+		_boardOfIndex = NULL;
 	}
 	if (_boardOfCubes) {
-		delete (_boardOfCubes);
+		for (int r = 0; r < _numBoardRows; r++) {
+			for (int c = 0; c < _numBoardCols; c++) {
+				delete _boardOfCubes[r][c];
+				_boardOfCubes[r][c] = NULL;
+			}
+			delete[] _boardOfCubes[r];
+			_boardOfCubes[r] = NULL;
+		}
+		delete[] (_boardOfCubes);
+		_boardOfCubes = NULL;
 	}
 }
 
@@ -61,13 +74,13 @@ bool PlayLayer::init()
 	_boardOfCubes = new CubeSprite * *[_numBoardRows];
 
 	for (int r = 0; r < _numBoardRows; r++) {
-		_boardOfIndex[r] = new int[_numBoardCols] {EMPTY};
+		_boardOfIndex[r] = new int[_numBoardCols];
 		_boardOfCubes[r] = new CubeSprite * [_numBoardCols];
 	}
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
 			_boardOfIndex[r][c] = EMPTY;
-			_boardOfCubes[r][c] = new CubeSprite;
+			_boardOfCubes[r][c] = new CubeSprite();
 		}
 	}
 
@@ -134,12 +147,14 @@ void PlayLayer::initBoardOfCubes()
 {
 	for (int r = _numBoardRows - 1; r >= 0; r--) {
 		for (int c = 0; c < _numBoardCols; c++) {
-			if (_boardOfIndex[r][c] != EMPTY) {
-			_boardOfCubes[r][c] = CubeSprite::create(r, c, _boardOfIndex[r][c]);
+			_boardOfCubes[r][c]->setRow(r);
+			_boardOfCubes[r][c]->setCol(c);
+			_boardOfCubes[r][c]->setImgIndex(_boardOfIndex[r][c]);
+			_boardOfCubes[r][c]->initWithSpriteFrameName(cubeSprites[_boardOfIndex[r][c]]);
 			_boardOfCubes[r][c]->setPosition(winPositionOfCube(r, c));
+
 			this->addChild(_boardOfCubes[r][c]);
 			dropCube(r, c, _boardOfCubes[r][c]);
-			}
 			
 		}
 	}
@@ -177,6 +192,7 @@ void PlayLayer::checkAndClearBoardOfIndex()
 	int** rightCubesOfCube = new int* [_numBoardRows];
 	int** upCubesOfCube = new int* [_numBoardRows];
 	int** downCubesOfCube = new int* [_numBoardRows];
+
 	for (int r = 0; r < _numBoardRows; r++) {
 		leftCubesOfCube[r] = new int[_numBoardCols] {0};
 		rightCubesOfCube[r] = new int[_numBoardCols] {0};
@@ -208,15 +224,26 @@ void PlayLayer::checkAndClearBoardOfIndex()
 	}
 
 	for (int r = 0; r < _numBoardRows; r++) {
-		delete leftCubesOfCube[r];
-		delete rightCubesOfCube[r];
-		delete upCubesOfCube[r];
-		delete downCubesOfCube[r];
+		delete[] leftCubesOfCube[r];
+		delete[] rightCubesOfCube[r];
+		delete[] upCubesOfCube[r];
+		delete[] downCubesOfCube[r];
+
+		leftCubesOfCube[r] = NULL;
+		rightCubesOfCube[r] = NULL;
+		upCubesOfCube[r] = NULL;
+		downCubesOfCube[r] = NULL;
 	}
-	delete leftCubesOfCube;
-	delete rightCubesOfCube;
-	delete upCubesOfCube;
-	delete downCubesOfCube;
+
+	delete[] leftCubesOfCube;
+	delete[] rightCubesOfCube;
+	delete[] upCubesOfCube;
+	delete[] downCubesOfCube;
+
+	leftCubesOfCube = NULL;
+	rightCubesOfCube = NULL;
+	upCubesOfCube = NULL;
+	downCubesOfCube = NULL;
 }
 
 void PlayLayer::clearBoardOfCubes()
@@ -229,6 +256,7 @@ void PlayLayer::clearBoardOfCubes()
 					_boardOfCubes[r][c]->runAction(FadeOut::create(1.0f));
 					_boardOfCubes[r][c]->removeFromParent();
 				}
+				delete _boardOfCubes[r][c];
 				_boardOfCubes[r][c] = NULL;
 			}
 		}
@@ -330,11 +358,14 @@ void PlayLayer::fillinEmpties()
 					int newRow = r + removedCubes;
 					_boardOfIndex[newRow][c] = _boardOfIndex[r][c];
 					_boardOfIndex[r][c] = EMPTY;
+
 					Vec2 startPosition = winPositionOfCube(r, c);
 					Vec2 endPositon = winPositionOfCube(newRow, c);
 					float time = (startPosition.y - endPositon.y) / (1.5 * visibleSize.height);
+
 					_boardOfCubes[newRow][c] = _boardOfCubes[r][c];
 					_boardOfCubes[r][c] = NULL;
+
 					_boardOfCubes[newRow][c]->stopAllActions();
 					_boardOfCubes[newRow][c]->runAction(MoveTo::create(time, endPositon));
 					_boardOfCubes[newRow][c]->setRow(newRow);
@@ -348,14 +379,21 @@ void PlayLayer::fillinEmpties()
 		if (numOfEmptyInCol[c] > 0) {
 			for (int r = numOfEmptyInCol[c] - 1; r >= 0; r--) {
 				_boardOfIndex[r][c] = random() % TOTAL_CUBE;
-				_boardOfCubes[r][c] = CubeSprite::create(r, c, _boardOfIndex[r][c]);
+
+				_boardOfCubes[r][c] = new CubeSprite();
+				_boardOfCubes[r][c]->setRow(r);
+				_boardOfCubes[r][c]->setCol(c);
+				_boardOfCubes[r][c]->setImgIndex(_boardOfIndex[r][c]);
+				_boardOfCubes[r][c]->initWithSpriteFrameName(cubeSprites[_boardOfIndex[r][c]]);
+
 				this->addChild(_boardOfCubes[r][c]);
 				dropCube(r, c, _boardOfCubes[r][c]);
 			}
 		}
 	}
 	
-	delete numOfEmptyInCol;
+	delete[] numOfEmptyInCol;
+	numOfEmptyInCol = NULL;
 }
 
 bool PlayLayer::onTouchBegan(Touch* touch, Event* unused)
@@ -430,7 +468,7 @@ CubeSprite* PlayLayer::cubeOfPoint(Vec2* point)
 
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
-			if (_boardOfCubes[r][c]) {
+			if (_boardOfCubes[r][c] != NULL) {
 				cubeZone.origin.x = _boardOfCubes[r][c]->getPositionX() - _boardOfCubes[r][c]->getContentSize().width / 2;
 				cubeZone.origin.y = _boardOfCubes[r][c]->getPositionY() - _boardOfCubes[r][c]->getContentSize().height / 2;
 				cubeZone.size = _boardOfCubes[r][c]->getContentSize();
@@ -468,20 +506,25 @@ void PlayLayer::swapCubes()
 		((numOfCubesUpChain(srcRow, srcCol) + numOfCubesDownChain(srcRow, srcCol)) >= 2) ||
 		((numOfCubesLeftChain(destRow, destCol) + numOfCubesRightChain(destRow, destCol)) >= 2) ||
 		((numOfCubesUpChain(destRow, destCol) + numOfCubesDownChain(destRow, destCol)) >= 2)) {
+
 		_boardOfCubes[srcRow][srcCol] = _destCube;
 		_boardOfCubes[srcRow][srcCol]->setRow(srcRow);
 		_boardOfCubes[srcRow][srcCol]->setCol(srcCol);
+
 		_boardOfCubes[destRow][destCol] = _srcCube;
 		_boardOfCubes[destRow][destCol]->setRow(destRow);
 		_boardOfCubes[destRow][destCol]->setCol(destCol);
+
 		_srcCube->runAction(MoveTo::create(time, positonOfDest));
 		_destCube->runAction(MoveTo::create(time, positonOfSrc));
+
 		return;
 	}
 
 	tmp = _boardOfIndex[srcRow][srcCol];
 	_boardOfIndex[srcRow][srcCol] = _boardOfIndex[destRow][destCol];
 	_boardOfIndex[destRow][destCol] = tmp;
+
 	_srcCube->runAction(Sequence::create(MoveTo::create(time, positonOfDest), 
 										 MoveTo::create(time, positonOfSrc), NULL));
 	_destCube->runAction(Sequence::create(MoveTo::create(time, positonOfSrc),
