@@ -25,10 +25,23 @@ PlayLayer::PlayLayer()
 PlayLayer::~PlayLayer()
 {
 	if (_boardOfIndex) {
-		delete (_boardOfIndex);
+		for (int r = 0; r < _numBoardRows; r++) {
+			delete[] _boardOfIndex[r];
+			_boardOfIndex[r] = NULL;
+		}
+		_boardOfIndex = NULL;
 	}
 	if (_boardOfCubes) {
-		delete (_boardOfCubes);
+		for (int r = 0; r < _numBoardRows; r++) {
+			for (int c = 0; c < _numBoardCols; c++) {
+				delete _boardOfCubes[r][c];
+				_boardOfCubes[r][c] = NULL;
+			}
+			delete[] _boardOfCubes[r];
+			_boardOfCubes[r] = NULL;
+		}
+		delete[] (_boardOfCubes);
+		_boardOfCubes = NULL;
 	}
 }
 
@@ -61,13 +74,13 @@ bool PlayLayer::init()
 	_boardOfCubes = new CubeSprite * *[_numBoardRows];
 
 	for (int r = 0; r < _numBoardRows; r++) {
-		_boardOfIndex[r] = new int[_numBoardCols] {EMPTY};
+		_boardOfIndex[r] = new int[_numBoardCols];
 		_boardOfCubes[r] = new CubeSprite * [_numBoardCols];
 	}
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
 			_boardOfIndex[r][c] = EMPTY;
-			_boardOfCubes[r][c] = new CubeSprite;
+			_boardOfCubes[r][c] = new CubeSprite();
 		}
 	}
 
@@ -76,6 +89,10 @@ bool PlayLayer::init()
 	this->scheduleUpdate();
 
 	//event listener
+	auto touchListener = EventListenerTouchOneByOne::create();
+	touchListener->onTouchBegan = CC_CALLBACK_2(PlayLayer::onTouchBegan, this);
+	touchListener->onTouchMoved = CC_CALLBACK_2(PlayLayer::onTouchMoved, this);
+	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
 
 	return true;
 }
@@ -114,7 +131,7 @@ void PlayLayer::initBoardOfIndex()
 {
 	int testBoard[5][5] = {
 		{0, 1, 0, 1, 3},
-		{2, 2, 2, 2, 1},
+		{2, 3, 2, 2, 1},
 		{0, 2, 3, 0, 1},
 		{3, 2, 1, 3, 0},
 		{1, 3, 2, 0, 1}
@@ -130,12 +147,14 @@ void PlayLayer::initBoardOfCubes()
 {
 	for (int r = _numBoardRows - 1; r >= 0; r--) {
 		for (int c = 0; c < _numBoardCols; c++) {
-			if (_boardOfIndex[r][c] != EMPTY) {
-			_boardOfCubes[r][c] = CubeSprite::create(r, c, _boardOfIndex[r][c]);
+			_boardOfCubes[r][c]->setRow(r);
+			_boardOfCubes[r][c]->setCol(c);
+			_boardOfCubes[r][c]->setImgIndex(_boardOfIndex[r][c]);
+			_boardOfCubes[r][c]->initWithSpriteFrameName(cubeSprites[_boardOfIndex[r][c]]);
 			_boardOfCubes[r][c]->setPosition(winPositionOfCube(r, c));
+
 			this->addChild(_boardOfCubes[r][c]);
 			dropCube(r, c, _boardOfCubes[r][c]);
-			}
 			
 		}
 	}
@@ -147,7 +166,7 @@ void PlayLayer::dropCube(int row, int col, CubeSprite* cube)
 
 	Vec2 endPosition = winPositionOfCube(row, col);
 	Vec2 startPosition = Vec2(endPosition.x, endPosition.y + visibleSize.height / 2);
-	float time = startPosition.y / (visibleSize.height);
+	float time = startPosition.y / (2 * visibleSize.height);
 
 	cube->setPosition(startPosition);
 	cube->runAction(MoveTo::create(time, endPosition));
@@ -169,38 +188,62 @@ void PlayLayer::checkAndClear()
 
 void PlayLayer::checkAndClearBoardOfIndex()
 {
+	int** leftCubesOfCube = new int* [_numBoardRows];
+	int** rightCubesOfCube = new int* [_numBoardRows];
+	int** upCubesOfCube = new int* [_numBoardRows];
+	int** downCubesOfCube = new int* [_numBoardRows];
+
+	for (int r = 0; r < _numBoardRows; r++) {
+		leftCubesOfCube[r] = new int[_numBoardCols] {0};
+		rightCubesOfCube[r] = new int[_numBoardCols] {0};
+		upCubesOfCube[r] = new int[_numBoardCols] {0};
+		downCubesOfCube[r] = new int[_numBoardCols] {0};
+	}
 
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
 			if (_boardOfIndex[r][c] == EMPTY) {
 				continue;
 			}
-
-			int leftCubes = numOfCubesLeftChain(r, c);
-			int rightCubes = numOfCubesRightChain(r, c);
-			int upCubes = numOfCubesUpChain(r, c);
-			int downCubes = numOfCubesDownChain(r, c);
-
-			int rowCubes = leftCubes + rightCubes + 1;
-			int colCubes = upCubes + downCubes + 1;
-			
-			if (rowCubes < 3 && colCubes < 3) {
-				continue;
-			}
-			else if (rowCubes >= 3 && colCubes >= 3) {
-				clearBoardOfIndexRowAndCol(r, c, leftCubes, rightCubes, upCubes, downCubes);
-			}
-			else {
-				if (rowCubes > colCubes) {
-					clearBoardOfIndexRow(r, c, leftCubes, rightCubes);
-				}
-				else {
-					clearBoardOfIndexCol(r, c, upCubes, downCubes);
-				}
-			}
-			
+			leftCubesOfCube[r][c] = numOfCubesLeftChain(r, c);
+			rightCubesOfCube[r][c] = numOfCubesRightChain(r, c);
+			upCubesOfCube[r][c] = numOfCubesUpChain(r, c);
+			downCubesOfCube[r][c] = numOfCubesDownChain(r, c);
 		}
 	}
+
+	for (int r = 0; r < _numBoardRows; r++) {
+		for (int c = 0; c < _numBoardCols; c++) {
+			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 2) {
+				clearBoardOfIndexRow(r, c, leftCubesOfCube[r][c], rightCubesOfCube[r][c]);
+			}
+			if (upCubesOfCube[r][c] + downCubesOfCube[r][c] >= 2) {
+				clearBoardOfIndexCol(r, c, upCubesOfCube[r][c], downCubesOfCube[r][c]);
+			}
+		}
+	}
+
+	for (int r = 0; r < _numBoardRows; r++) {
+		delete[] leftCubesOfCube[r];
+		delete[] rightCubesOfCube[r];
+		delete[] upCubesOfCube[r];
+		delete[] downCubesOfCube[r];
+
+		leftCubesOfCube[r] = NULL;
+		rightCubesOfCube[r] = NULL;
+		upCubesOfCube[r] = NULL;
+		downCubesOfCube[r] = NULL;
+	}
+
+	delete[] leftCubesOfCube;
+	delete[] rightCubesOfCube;
+	delete[] upCubesOfCube;
+	delete[] downCubesOfCube;
+
+	leftCubesOfCube = NULL;
+	rightCubesOfCube = NULL;
+	upCubesOfCube = NULL;
+	downCubesOfCube = NULL;
 }
 
 void PlayLayer::clearBoardOfCubes()
@@ -213,6 +256,7 @@ void PlayLayer::clearBoardOfCubes()
 					_boardOfCubes[r][c]->runAction(FadeOut::create(1.0f));
 					_boardOfCubes[r][c]->removeFromParent();
 				}
+				delete _boardOfCubes[r][c];
 				_boardOfCubes[r][c] = NULL;
 			}
 		}
@@ -283,16 +327,6 @@ int PlayLayer::numOfCubesDownChain(int row, int col)
 	return numOfCubes;
 }
 
-void PlayLayer::clearBoardOfIndexRowAndCol(int row, int col, int left, int right, int up, int down)
-{
-	for (int r = row, c = col - left; c <= col + right; c++) {
-		_boardOfIndex[r][c] = EMPTY;
-	}
-	for (int r = row - up, c = col; r <= row + down; r++) {
-		_boardOfIndex[r][c] = EMPTY;
-	}
-}
-
 void PlayLayer::clearBoardOfIndexRow(int row, int col, int left, int right)
 {
 	for (int r = row, c = col - left; c <= col + right; c++) {
@@ -302,7 +336,7 @@ void PlayLayer::clearBoardOfIndexRow(int row, int col, int left, int right)
 
 void PlayLayer::clearBoardOfIndexCol(int row, int col, int up, int down)
 {
-	for (int r = row - up, c = col; r < row + down; r++) {
+	for (int r = row - up, c = col; r <= row + down; r++) {
 		_boardOfIndex[r][c] = EMPTY;
 	}
 }
@@ -324,11 +358,14 @@ void PlayLayer::fillinEmpties()
 					int newRow = r + removedCubes;
 					_boardOfIndex[newRow][c] = _boardOfIndex[r][c];
 					_boardOfIndex[r][c] = EMPTY;
+
 					Vec2 startPosition = winPositionOfCube(r, c);
 					Vec2 endPositon = winPositionOfCube(newRow, c);
-					float time = (startPosition.y - endPositon.y) / (0.5 * visibleSize.height);
+					float time = (startPosition.y - endPositon.y) / (1.5 * visibleSize.height);
+
 					_boardOfCubes[newRow][c] = _boardOfCubes[r][c];
 					_boardOfCubes[r][c] = NULL;
+
 					_boardOfCubes[newRow][c]->stopAllActions();
 					_boardOfCubes[newRow][c]->runAction(MoveTo::create(time, endPositon));
 					_boardOfCubes[newRow][c]->setRow(newRow);
@@ -338,18 +375,159 @@ void PlayLayer::fillinEmpties()
 		numOfEmptyInCol[c] = removedCubes;
 	}
 	
-	
 	for (int c = 0; c < _numBoardCols; c++) {
 		if (numOfEmptyInCol[c] > 0) {
 			for (int r = numOfEmptyInCol[c] - 1; r >= 0; r--) {
 				_boardOfIndex[r][c] = random() % TOTAL_CUBE;
-				_boardOfCubes[r][c] = CubeSprite::create(r, c, _boardOfIndex[r][c]);
+
+				_boardOfCubes[r][c] = new CubeSprite();
+				_boardOfCubes[r][c]->setRow(r);
+				_boardOfCubes[r][c]->setCol(c);
+				_boardOfCubes[r][c]->setImgIndex(_boardOfIndex[r][c]);
+				_boardOfCubes[r][c]->initWithSpriteFrameName(cubeSprites[_boardOfIndex[r][c]]);
+
 				this->addChild(_boardOfCubes[r][c]);
 				dropCube(r, c, _boardOfCubes[r][c]);
 			}
 		}
 	}
 	
+	delete[] numOfEmptyInCol;
+	numOfEmptyInCol = NULL;
+}
 
-	delete numOfEmptyInCol;
+bool PlayLayer::onTouchBegan(Touch* touch, Event* unused)
+{
+	_srcCube = NULL;
+	_destCube = NULL;
+	if (_isTouchEnable) {
+		auto touchLocation = touch->getLocation();
+		_srcCube = cubeOfPoint(&touchLocation);
+	}
+	return _isTouchEnable;
+}
+
+void PlayLayer::onTouchMoved(Touch* touch, Event* unused)
+{
+	if (!_isTouchEnable || _srcCube == NULL) {
+		return;
+	}
+
+	int row = _srcCube->getRow();
+	int col = _srcCube->getCol();
+	auto touchLocation = touch->getLocation();
+	int halfWidth = _srcCube->getContentSize().width / 2;
+	int halfHeight = _srcCube->getContentSize().height / 2;
+	auto size = _srcCube->getContentSize();
+
+	Rect leftRect = Rect(_srcCube->getPositionX() - 3 * halfWidth, _srcCube->getPositionY() - halfHeight, 2 * halfWidth, 2 * halfHeight);
+	Rect rightRect = Rect(_srcCube->getPositionX() + halfWidth, _srcCube->getPositionY() - halfHeight, 2 * halfWidth, 2 * halfHeight);
+	Rect upRect = Rect(_srcCube->getPositionX() - halfWidth, _srcCube->getPositionY() + halfHeight, 2 * halfWidth, 2 * halfHeight);
+	Rect downRect = Rect(_srcCube->getPositionX() - halfWidth, _srcCube->getPositionY() - 3 * halfHeight, 2 * halfWidth, 2 * halfHeight);
+
+	if (leftRect.containsPoint(touchLocation)) {
+		col--;
+		if (col >= 0) {
+			_destCube = _boardOfCubes[row][col];
+		}
+		swapCubes();
+		return;
+	}
+	
+	if (rightRect.containsPoint(touchLocation)) {
+		col++;
+		if (col < _numBoardCols) {
+			_destCube = _boardOfCubes[row][col];
+		}
+		swapCubes();
+		return;
+	}
+
+	if (upRect.containsPoint(touchLocation)) {
+		row--;
+		if (row >= 0) {
+			_destCube = _boardOfCubes[row][col];
+		}
+		swapCubes();
+		return;
+	}
+
+	if (downRect.containsPoint(touchLocation)) {
+		row++;
+		if (row < _numBoardRows) {
+			_destCube = _boardOfCubes[row][col];
+		}
+		swapCubes();
+		return;
+	}
+}
+
+CubeSprite* PlayLayer::cubeOfPoint(Vec2* point)
+{
+	Rect cubeZone = Rect(0, 0, 0, 0);
+
+	for (int r = 0; r < _numBoardRows; r++) {
+		for (int c = 0; c < _numBoardCols; c++) {
+			if (_boardOfCubes[r][c] != NULL) {
+				cubeZone.origin.x = _boardOfCubes[r][c]->getPositionX() - _boardOfCubes[r][c]->getContentSize().width / 2;
+				cubeZone.origin.y = _boardOfCubes[r][c]->getPositionY() - _boardOfCubes[r][c]->getContentSize().height / 2;
+				cubeZone.size = _boardOfCubes[r][c]->getContentSize();
+				if (cubeZone.containsPoint(*point)) {
+					return _boardOfCubes[r][c];
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void PlayLayer::swapCubes()
+{
+	_isTouchEnable = false;
+	_isActing = true;
+	if (_srcCube == NULL || _destCube == NULL) {
+		return;
+	}
+
+	Vec2 positonOfSrc = _srcCube->getPosition();
+	Vec2 positonOfDest = _destCube->getPosition();
+	int srcRow = _srcCube->getRow();
+	int srcCol = _srcCube->getCol();
+	int destRow = _destCube->getRow();
+	int destCol = _destCube->getCol();
+	float time = 0.2;
+
+	int tmp = _boardOfIndex[srcRow][srcCol];
+	_boardOfIndex[srcRow][srcCol] = _boardOfIndex[destRow][destCol];
+	_boardOfIndex[destRow][destCol] = tmp;
+
+	if  ((numOfCubesLeftChain(srcRow, srcCol) + numOfCubesRightChain(srcRow, srcCol) >= 2) ||
+		((numOfCubesUpChain(srcRow, srcCol) + numOfCubesDownChain(srcRow, srcCol)) >= 2) ||
+		((numOfCubesLeftChain(destRow, destCol) + numOfCubesRightChain(destRow, destCol)) >= 2) ||
+		((numOfCubesUpChain(destRow, destCol) + numOfCubesDownChain(destRow, destCol)) >= 2)) {
+
+		_boardOfCubes[srcRow][srcCol] = _destCube;
+		_boardOfCubes[srcRow][srcCol]->setRow(srcRow);
+		_boardOfCubes[srcRow][srcCol]->setCol(srcCol);
+
+		_boardOfCubes[destRow][destCol] = _srcCube;
+		_boardOfCubes[destRow][destCol]->setRow(destRow);
+		_boardOfCubes[destRow][destCol]->setCol(destCol);
+
+		_srcCube->runAction(MoveTo::create(time, positonOfDest));
+		_destCube->runAction(MoveTo::create(time, positonOfSrc));
+
+		return;
+	}
+
+	tmp = _boardOfIndex[srcRow][srcCol];
+	_boardOfIndex[srcRow][srcCol] = _boardOfIndex[destRow][destCol];
+	_boardOfIndex[destRow][destCol] = tmp;
+
+	_srcCube->runAction(Sequence::create(MoveTo::create(time, positonOfDest), 
+										 MoveTo::create(time, positonOfSrc), NULL));
+	_destCube->runAction(Sequence::create(MoveTo::create(time, positonOfSrc),
+										  MoveTo::create(time, positonOfDest), NULL));
+	return;
 }

@@ -1,12 +1,6 @@
 #include "CubeSprite.h"
 
-static const char* cubeSprites[TOTAL_CUBE] =
-{
-	"cube1.png",
-	"cube2.png",
-	"cube3.png",
-	"cube4.png"
-};
+
 
 CubeSprite::CubeSprite()
 {
@@ -21,19 +15,6 @@ static void problemLoading(const char* filename)
 	printf("Depending on how you compiled you might have to add 'Resources/' in front of filenames in CubeSprites.cpp\n");
 }
 
-CubeSprite* CubeSprite::create(int row, int col, int index)
-{
-	CubeSprite* cube = new CubeSprite;
-	cube->_row = row;
-	cube->_col = col;
-	cube->_imgIndex = index;
-	cube->initWithSpriteFrameName(cubeSprites[index]);
-
-	cube->autorelease();
-
-	return cube;
-}
-
 float CubeSprite::getCubeLength()
 {
 	static float length = 0;
@@ -45,7 +26,7 @@ float CubeSprite::getCubeLength()
 			problemLoading("cube1.png");
 		}
 		length = sprite->getContentSize().width;
-		//delete sprite;
+		delete sprite;
 	}
 
 	return length;
