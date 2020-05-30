@@ -1,7 +1,5 @@
 #include "CubeSprite.h"
 
-
-
 CubeSprite::CubeSprite()
 {
 	_row = 0;
