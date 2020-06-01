@@ -4,22 +4,22 @@
     <dict>
         <key>frames</key>
         <dict>
-            <key>cube1.png</key>
+            <key>cubeCol1.png</key>
             <dict>
                 <key>aliases</key>
                 <array/>
                 <key>spriteOffset</key>
                 <string>{0,0}</string>
                 <key>spriteSize</key>
-                <string>{90,90}</string>
+                <string>{89,90}</string>
                 <key>spriteSourceSize</key>
-                <string>{90,90}</string>
+                <string>{89,90}</string>
                 <key>textureRect</key>
-                <string>{{0,0},{90,90}}</string>
+                <string>{{0,0},{89,90}}</string>
                 <key>textureRotated</key>
                 <false/>
             </dict>
-            <key>cube2.png</key>
+            <key>cubeCol2.png</key>
             <dict>
                 <key>aliases</key>
                 <array/>
@@ -30,11 +30,11 @@
                 <key>spriteSourceSize</key>
                 <string>{90,89}</string>
                 <key>textureRect</key>
-                <string>{{90,0},{90,89}}</string>
+                <string>{{89,0},{90,89}}</string>
                 <key>textureRotated</key>
                 <false/>
             </dict>
-            <key>cube3.png</key>
+            <key>cubeCol3.png</key>
             <dict>
                 <key>aliases</key>
                 <array/>
@@ -45,11 +45,11 @@
                 <key>spriteSourceSize</key>
                 <string>{89,90}</string>
                 <key>textureRect</key>
-                <string>{{180,0},{89,90}}</string>
+                <string>{{179,0},{89,90}}</string>
                 <key>textureRotated</key>
                 <false/>
             </dict>
-            <key>cube4.png</key>
+            <key>cubeCol4.png</key>
             <dict>
                 <key>aliases</key>
                 <array/>
@@ -60,7 +60,7 @@
                 <key>spriteSourceSize</key>
                 <string>{89,90}</string>
                 <key>textureRect</key>
-                <string>{{269,0},{89,90}}</string>
+                <string>{{268,0},{89,90}}</string>
                 <key>textureRotated</key>
                 <false/>
             </dict>
@@ -74,13 +74,13 @@
             <key>premultiplyAlpha</key>
             <false/>
             <key>realTextureFileName</key>
-            <string>cubeSprites.png</string>
+            <string>cubeCol.png</string>
             <key>size</key>
-            <string>{358,90}</string>
+            <string>{357,90}</string>
             <key>smartupdate</key>
-            <string>$TexturePacker:SmartUpdate:d087c447056f2731435f5afa180a6f69:71d33f262899955c2fe3267548174c8c:3402caa71b6731ae425a1027b6654cc5$</string>
+            <string>$TexturePacker:SmartUpdate:4d3d2367a67868e3f48f9a0eee6026af:df0c29d0a6c69a30a617e9e2b5d676e2:9ee249d1905d85813449eb49293501d5$</string>
             <key>textureFileName</key>
-            <string>cubeSprites.png</string>
+            <string>cubeCol.png</string>
         </dict>
     </dict>
 </plist>
