@@ -14,16 +14,22 @@ public:
 	PlayLayer();
 	~PlayLayer();
 
-	virtual bool init();
-	virtual void update(float dt);
-	//virtual bool onTouchBegan(Touch* touch, Event* unused);
-	//virtual void onTouchMoved(Touch* touch, Event* unused);
+	virtual bool init() override;
+	virtual void update(float dt) override;
+	virtual bool onTouchBegan(Touch* touch, Event* event) override;
+	virtual void onTouchMoved(Touch* touch, Event* event) override;
 
 	CREATE_FUNC(PlayLayer);
 private:
 	SpriteFrameCache* spriteSheet;
-	int** _boardOfIndex;
-	CubeSprite*** _boardOfCubes;
+	//int** _boardOfIndex;
+	std::vector<std::vector<int> >* _boardOfIndex;
+	//std::vector<std::vector<int> >::iterator _rBoardIndex;
+	//std::vector<int>::iterator _cBoardIndex;
+	//CubeSprite*** _boardOfCubes;
+	std::vector<std::vector<CubeSprite*> >* _boardOfCubes;
+	//std::vector<std::vector<CubeSprite*> > ::iterator _rc;
+	//std::vector<CubeSprite*>::iterator _cc;
 	int _numBoardCols;
 	int _numBoardRows;
 	float _boardLeftTopX;
@@ -34,26 +40,25 @@ private:
 	bool _isActing;
 	bool _needFillin;
 
-	void dropCube(int row, int col, CubeSprite* cube);
+	void dropCube(CubeSprite* cube);
 	void fillinEmpties();
 	void checkAndClear();
+	CubeSprite* cubeOfPoint(Vec2* point);
+	void swapCubes();
 
 	void initBoardOfIndex();
 	Vec2 winPositionOfCube(int row, int col);
-	void checkAndClearBoardOfIndex();
-	void clearBoardOfIndexRowAndCol(int row, int col, int left, int right, int up, int down);
+	//void checkAndClearBoardOfIndex();
+	void checkAndClearBoardOfIndex(int mode);
 	void clearBoardOfIndexRow(int row, int col, int left, int right);
 	void clearBoardOfIndexCol(int row, int col, int up, int down);
+	void clearBoardOfIndexCol(int col);
 	int numOfCubesLeftChain(int row, int col);
 	int numOfCubesRightChain(int row, int col);
 	int numOfCubesUpChain(int row, int col);
 	int numOfCubesDownChain(int row, int col);
-	//void dropExistOnesInIndexBoard();
-	//void dropNewOnesInIndexBoard();
 
 	void initBoardOfCubes();
 	void clearBoardOfCubes();
-	//int dropExistOnesInCubesBoard();
-	//void dropNewOnesInCubesBoard(int numNewCubes);
 };
 #endif // !__PLAY_LAYER_H__
