@@ -58,6 +58,7 @@ bool PlayLayer::init()
 
 	spriteSheet = SpriteFrameCache::getInstance();
 	spriteSheet->addSpriteFramesWithFile("cubeSprites.plist");
+	spriteSheet->addSpriteFramesWithFile("cubeCol.plist");
 
 	_numBoardRows = BOARD_ROWS;
 	_numBoardCols = BOARD_COLS;
@@ -91,7 +92,7 @@ bool PlayLayer::init()
 	auto touchListener = EventListenerTouchOneByOne::create();
 	touchListener->onTouchBegan = CC_CALLBACK_2(PlayLayer::onTouchBegan, this);
 	touchListener->onTouchMoved = CC_CALLBACK_2(PlayLayer::onTouchMoved, this);
-	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
+	Director::getInstance()->getEventDispatcher()->addEventListenerWithSceneGraphPriority(touchListener, this);
 
 	return true;
 }
@@ -131,11 +132,11 @@ void PlayLayer::update(float dt)
 void PlayLayer::initBoardOfIndex()
 {
 	int testBoard[5][5] = {
-		{0, 1, 0, 1, 3},
-		{2, 3, 2, 2, 1},
+		{0, 2, 0, 1, 3},
+		{2, 3, 2, 1, 1},
 		{0, 2, 3, 0, 1},
 		{3, 2, 1, 3, 0},
-		{1, 3, 2, 0, 1}
+		{1, 1, 2, 0, 1}
 	};
 
 	for (int row = 0; row < _numBoardRows; row++) {
@@ -152,23 +153,27 @@ void PlayLayer::initBoardOfCubes()
 			(*_boardOfCubes)[r][c] = new CubeSprite();
 			(*_boardOfCubes)[r][c]->setRow(r);
 			(*_boardOfCubes)[r][c]->setCol(c);
-			(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
+
+			//(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
+
 			(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[(*_boardOfIndex)[r][c]]);
 			(*_boardOfCubes)[r][c]->setPosition(winPositionOfCube(r, c));
 
 			this->addChild((*_boardOfCubes)[r][c]);
-			dropCube(r, c, (*_boardOfCubes)[r][c]);
+
+			dropCube((*_boardOfCubes)[r][c]);
+
 		}
 	}
 	
 }
 
-void PlayLayer::dropCube(int row, int col, CubeSprite* cube)
+void PlayLayer::dropCube(CubeSprite* cube)
 {
 	Size visibleSize = Director::getInstance()->getVisibleSize();
 
-	Vec2 endPosition = winPositionOfCube(row, col);
-	Vec2 startPosition = Vec2(endPosition.x, endPosition.y + visibleSize.height / 2);
+	Vec2 endPosition = cube->getPosition();
+	Vec2 startPosition = Vec2(endPosition.x, endPosition.y + visibleSize.height);
 	float time = startPosition.y / (2 * visibleSize.height);
 
 	cube->setPosition(startPosition);
@@ -185,11 +190,12 @@ Vec2 PlayLayer::winPositionOfCube(int row, int col)
 
 void PlayLayer::checkAndClear()
 {
-	checkAndClearBoardOfIndex();
+	checkAndClearBoardOfIndex(SPECIAL_COL_CUBE_INDEX);
+	checkAndClearBoardOfIndex(0);
 	clearBoardOfCubes();
 }
 
-void PlayLayer::checkAndClearBoardOfIndex()
+void PlayLayer::checkAndClearBoardOfIndex(int mode)
 {
 	std::vector<std::vector<int> >::iterator rBoardIndex;
 	std::vector<int>::iterator cBoardIndex;
@@ -228,11 +234,31 @@ void PlayLayer::checkAndClearBoardOfIndex()
 				}
 			}
 			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 2) {
-				clearBoardOfIndexRow(r, c, leftCubesOfCube[r][c], rightCubesOfCube[r][c]);
+				switch (mode)
+				{
+				case 0:
+					clearBoardOfIndexRow(r, c, leftCubesOfCube[r][c], rightCubesOfCube[r][c]);
+					break;
+				case SPECIAL_COL_CUBE_INDEX:
+					if ((*_boardOfIndex)[r][c] / 4 == SPECIAL_COL_CUBE_INDEX) {
+						clearBoardOfIndexCol(c);
+					}
+					break;
+				}
 			}
 			
 			if (upCubesOfCube[r][c] + downCubesOfCube[r][c] >= 2) {
-				clearBoardOfIndexCol(r, c, upCubesOfCube[r][c], downCubesOfCube[r][c]);
+				switch (mode)
+				{
+				case 0:
+					clearBoardOfIndexCol(r, c, upCubesOfCube[r][c], downCubesOfCube[r][c]);
+					break;
+				case SPECIAL_COL_CUBE_INDEX:
+					if ((*_boardOfIndex)[r][c] / 4 == SPECIAL_COL_CUBE_INDEX) {
+						clearBoardOfIndexCol(c);
+					}
+					break;
+				}
 			}
 		}
 	}
@@ -267,11 +293,19 @@ void PlayLayer::clearBoardOfCubes()
 			if ((*_boardOfIndex)[r][c] == EMPTY) {
 				_needFillin = true;
 				if ((*_boardOfCubes)[r][c]) {
-					(*_boardOfCubes)[r][c]->runAction(FadeOut::create(1.0f));
+
+					(*_boardOfCubes)[r][c]->runAction(FadeOut::create(60.0f));
 					(*_boardOfCubes)[r][c]->removeFromParent();
 				}
 				//delete (*_boardOfCubes)[r][c];
 				(*_boardOfCubes)[r][c] = NULL;
+			}
+			else if ((*_boardOfIndex)[r][c] / TOTAL_CUBE == SPECIAL_COL_CUBE_INDEX) {
+				if ((*_boardOfCubes)[r][c]) {
+					int i = (*_boardOfIndex)[r][c] % TOTAL_CUBE;
+					(*_boardOfCubes)[r][c]->setTexture(cubeCol[i]);
+				}
+
 			}
 		}
 	}
@@ -283,7 +317,9 @@ int PlayLayer::numOfCubesLeftChain(int row, int col)
 	int numOfCubes = 0;
 	int leftNeighbourCol = col - 1;
 	while (leftNeighbourCol >= 0) {
-		if ((*_boardOfIndex)[row][leftNeighbourCol] == (*_boardOfIndex)[row][col]) {
+
+		if (((*_boardOfIndex)[row][leftNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+
 			numOfCubes++;
 		}
 		else {
@@ -299,7 +335,9 @@ int PlayLayer::numOfCubesRightChain(int row, int col)
 	int numOfCubes = 0;
 	int rightNeighbourCol = col + 1;
 	while (rightNeighbourCol < _numBoardCols) {
-		if ((*_boardOfIndex)[row][rightNeighbourCol] == (*_boardOfIndex)[row][col]) {
+
+		if (((*_boardOfIndex)[row][rightNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+
 			numOfCubes++;
 		}
 		else {
@@ -315,7 +353,9 @@ int PlayLayer::numOfCubesUpChain(int row, int col)
 	int numOfCubes = 0;
 	int upNeighbourRow = row - 1;
 	while (upNeighbourRow >= 0) {
-		if ((*_boardOfIndex)[upNeighbourRow][col] == (*_boardOfIndex)[row][col]) {
+
+		if (((*_boardOfIndex)[upNeighbourRow][col] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+
 			numOfCubes++;
 		}
 		else {
@@ -331,7 +371,9 @@ int PlayLayer::numOfCubesDownChain(int row, int col)
 	int numOfCubes = 0;
 	int downNeighbourRow = row + 1;
 	while (downNeighbourRow < _numBoardRows) {
-		if ((*_boardOfIndex)[downNeighbourRow][col] == (*_boardOfIndex)[row][col]) {
+
+		if (((*_boardOfIndex)[downNeighbourRow][col] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+
 			numOfCubes++;
 		}
 		else {
@@ -351,8 +393,25 @@ void PlayLayer::clearBoardOfIndexRow(int row, int col, int left, int right)
 
 void PlayLayer::clearBoardOfIndexCol(int row, int col, int up, int down)
 {
-	for (int r = row - up, c = col; r <= row + down; r++) {
-		(*_boardOfIndex)[r][c] = EMPTY;
+
+	for (int r = row - up, c = col; r < row + down; r++) {
+		if ((*_boardOfIndex)[r][c] < TOTAL_CUBE) {
+			(*_boardOfIndex)[r][c] = EMPTY;
+		}
+	}
+	if (up + down >= 3) {
+		(*_boardOfIndex)[row + down][col] = (SPECIAL_COL_CUBE_INDEX * TOTAL_CUBE) + ((*_boardOfIndex)[row + down][col] % TOTAL_CUBE);
+	}
+	else {
+		(*_boardOfIndex)[row + down][col] = EMPTY;
+	}
+}
+
+void PlayLayer::clearBoardOfIndexCol(int col)
+{
+	for (int r = 0; r < _numBoardRows; r++) {
+		(*_boardOfIndex)[r][col] = EMPTY;
+
 	}
 }
 
@@ -376,7 +435,7 @@ void PlayLayer::fillinEmpties()
 
 					Vec2 startPosition = winPositionOfCube(r, c);
 					Vec2 endPositon = winPositionOfCube(newRow, c);
-					float time = (startPosition.y - endPositon.y) / (1.5 * visibleSize.height);
+					float time = (startPosition.y - endPositon.y) / (2 * visibleSize.height);
 
 					(*_boardOfCubes)[newRow][c] = (*_boardOfCubes)[r][c];
 					(*_boardOfCubes)[r][c] = NULL;
@@ -398,11 +457,13 @@ void PlayLayer::fillinEmpties()
 				(*_boardOfCubes)[r][c] = new CubeSprite();
 				(*_boardOfCubes)[r][c]->setRow(r);
 				(*_boardOfCubes)[r][c]->setCol(c);
-				(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
+
+				//(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
 				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[(*_boardOfIndex)[r][c]]);
+				(*_boardOfCubes)[r][c]->setPosition(winPositionOfCube(r, c));
 
 				this->addChild((*_boardOfCubes)[r][c]);
-				dropCube(r, c, (*_boardOfCubes)[r][c]);
+
 			}
 		}
 	}
@@ -411,7 +472,7 @@ void PlayLayer::fillinEmpties()
 	numOfEmptyInCol = NULL;
 }
 
-bool PlayLayer::onTouchBegan(Touch* touch, Event* unused)
+bool PlayLayer::onTouchBegan(Touch* touch, Event* event)
 {
 	_srcCube = NULL;
 	_destCube = NULL;
@@ -422,7 +483,7 @@ bool PlayLayer::onTouchBegan(Touch* touch, Event* unused)
 	return _isTouchEnable;
 }
 
-void PlayLayer::onTouchMoved(Touch* touch, Event* unused)
+void PlayLayer::onTouchMoved(Touch* touch, Event* event)
 {
 	if (!_isTouchEnable || _srcCube == NULL) {
 		return;

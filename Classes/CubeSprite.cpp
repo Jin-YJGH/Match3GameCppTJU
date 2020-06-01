@@ -4,7 +4,7 @@ CubeSprite::CubeSprite()
 {
 	_row = 0;
 	_col = 0;
-	_imgIndex = EMPTY;
+	//_imgIndex = EMPTY;
 }
 
 static void problemLoading(const char* filename)
