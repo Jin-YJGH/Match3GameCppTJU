@@ -13,7 +13,7 @@ static void problemLoading(const char* filename)
 	printf("Depending on how you compiled you might have to add 'Resources/' in front of filenames in CubeSprites.cpp\n");
 }
 
-float CubeSprite::getCubeLength()
+inline float CubeSprite::getCubeLength()
 {
 	static float length = 0;
 
