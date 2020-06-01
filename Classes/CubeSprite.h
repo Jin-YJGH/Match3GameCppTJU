@@ -31,7 +31,7 @@ class CubeSprite : public Sprite
 {
 public:
 	CubeSprite();
-	inline static float getCubeLength();
+	static float getCubeLength();
 
 	CC_SYNTHESIZE(int, _row, Row);
 	CC_SYNTHESIZE(int, _col, Col);
