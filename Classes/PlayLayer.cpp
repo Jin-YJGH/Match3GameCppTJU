@@ -153,16 +153,12 @@ void PlayLayer::initBoardOfCubes()
 			(*_boardOfCubes)[r][c] = new CubeSprite();
 			(*_boardOfCubes)[r][c]->setRow(r);
 			(*_boardOfCubes)[r][c]->setCol(c);
-
 			//(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
-
 			(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[(*_boardOfIndex)[r][c]]);
 			(*_boardOfCubes)[r][c]->setPosition(winPositionOfCube(r, c));
 
 			this->addChild((*_boardOfCubes)[r][c]);
-
 			dropCube((*_boardOfCubes)[r][c]);
-
 		}
 	}
 	
@@ -228,11 +224,6 @@ void PlayLayer::checkAndClearBoardOfIndex(int mode)
 
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
-			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 3) {
-				if ((_srcCube != NULL) && (_destCube != NULL)) {
-
-				}
-			}
 			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 2) {
 				switch (mode)
 				{
@@ -293,7 +284,6 @@ void PlayLayer::clearBoardOfCubes()
 			if ((*_boardOfIndex)[r][c] == EMPTY) {
 				_needFillin = true;
 				if ((*_boardOfCubes)[r][c]) {
-
 					(*_boardOfCubes)[r][c]->runAction(FadeOut::create(60.0f));
 					(*_boardOfCubes)[r][c]->removeFromParent();
 				}
@@ -305,7 +295,6 @@ void PlayLayer::clearBoardOfCubes()
 					int i = (*_boardOfIndex)[r][c] % TOTAL_CUBE;
 					(*_boardOfCubes)[r][c]->setTexture(cubeCol[i]);
 				}
-
 			}
 		}
 	}
@@ -317,9 +306,7 @@ int PlayLayer::numOfCubesLeftChain(int row, int col)
 	int numOfCubes = 0;
 	int leftNeighbourCol = col - 1;
 	while (leftNeighbourCol >= 0) {
-
 		if (((*_boardOfIndex)[row][leftNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
-
 			numOfCubes++;
 		}
 		else {
@@ -335,9 +322,7 @@ int PlayLayer::numOfCubesRightChain(int row, int col)
 	int numOfCubes = 0;
 	int rightNeighbourCol = col + 1;
 	while (rightNeighbourCol < _numBoardCols) {
-
 		if (((*_boardOfIndex)[row][rightNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
-
 			numOfCubes++;
 		}
 		else {
@@ -353,9 +338,7 @@ int PlayLayer::numOfCubesUpChain(int row, int col)
 	int numOfCubes = 0;
 	int upNeighbourRow = row - 1;
 	while (upNeighbourRow >= 0) {
-
 		if (((*_boardOfIndex)[upNeighbourRow][col] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
-
 			numOfCubes++;
 		}
 		else {
@@ -371,9 +354,7 @@ int PlayLayer::numOfCubesDownChain(int row, int col)
 	int numOfCubes = 0;
 	int downNeighbourRow = row + 1;
 	while (downNeighbourRow < _numBoardRows) {
-
 		if (((*_boardOfIndex)[downNeighbourRow][col] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
-
 			numOfCubes++;
 		}
 		else {
@@ -393,7 +374,6 @@ void PlayLayer::clearBoardOfIndexRow(int row, int col, int left, int right)
 
 void PlayLayer::clearBoardOfIndexCol(int row, int col, int up, int down)
 {
-
 	for (int r = row - up, c = col; r < row + down; r++) {
 		if ((*_boardOfIndex)[r][c] < TOTAL_CUBE) {
 			(*_boardOfIndex)[r][c] = EMPTY;
@@ -411,7 +391,6 @@ void PlayLayer::clearBoardOfIndexCol(int col)
 {
 	for (int r = 0; r < _numBoardRows; r++) {
 		(*_boardOfIndex)[r][col] = EMPTY;
-
 	}
 }
 
@@ -457,13 +436,12 @@ void PlayLayer::fillinEmpties()
 				(*_boardOfCubes)[r][c] = new CubeSprite();
 				(*_boardOfCubes)[r][c]->setRow(r);
 				(*_boardOfCubes)[r][c]->setCol(c);
-
 				//(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
 				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[(*_boardOfIndex)[r][c]]);
 				(*_boardOfCubes)[r][c]->setPosition(winPositionOfCube(r, c));
 
 				this->addChild((*_boardOfCubes)[r][c]);
-
+				dropCube((*_boardOfCubes)[r][c]);
 			}
 		}
 	}
