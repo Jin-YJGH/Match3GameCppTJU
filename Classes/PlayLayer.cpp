@@ -93,7 +93,6 @@ bool PlayLayer::init()
 	touchListener->onTouchBegan = CC_CALLBACK_2(PlayLayer::onTouchBegan, this);
 	touchListener->onTouchMoved = CC_CALLBACK_2(PlayLayer::onTouchMoved, this);
 	Director::getInstance()->getEventDispatcher()->addEventListenerWithSceneGraphPriority(touchListener, this);
-
 	return true;
 }
 
@@ -170,6 +169,7 @@ void PlayLayer::dropCube(CubeSprite* cube)
 
 	Vec2 endPosition = cube->getPosition();
 	Vec2 startPosition = Vec2(endPosition.x, endPosition.y + visibleSize.height);
+
 	float time = startPosition.y / (2 * visibleSize.height);
 
 	cube->setPosition(startPosition);
@@ -192,6 +192,7 @@ void PlayLayer::checkAndClear()
 }
 
 void PlayLayer::checkAndClearBoardOfIndex(int mode)
+
 {
 	std::vector<std::vector<int> >::iterator rBoardIndex;
 	std::vector<int>::iterator cBoardIndex;
@@ -285,6 +286,7 @@ void PlayLayer::clearBoardOfCubes()
 				_needFillin = true;
 				if ((*_boardOfCubes)[r][c]) {
 					(*_boardOfCubes)[r][c]->runAction(FadeOut::create(60.0f));
+
 					(*_boardOfCubes)[r][c]->removeFromParent();
 				}
 				//delete (*_boardOfCubes)[r][c];
@@ -307,6 +309,7 @@ int PlayLayer::numOfCubesLeftChain(int row, int col)
 	int leftNeighbourCol = col - 1;
 	while (leftNeighbourCol >= 0) {
 		if (((*_boardOfIndex)[row][leftNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+
 			numOfCubes++;
 		}
 		else {
@@ -451,6 +454,7 @@ void PlayLayer::fillinEmpties()
 }
 
 bool PlayLayer::onTouchBegan(Touch* touch, Event* event)
+
 {
 	_srcCube = NULL;
 	_destCube = NULL;
