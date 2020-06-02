@@ -171,9 +171,9 @@ void PlayLayer::initBoardOfIndex()
 {
 	int testBoard[5][5] = {
 		{0, 2, 3, 1, 3},
-		{2, 0, 2, 2, 1},
-		{0, 1, 3, 2, 1},
-		{3, 0, 1, 3, 0},
+		{6, 0, 2, 10, 1},
+		{0, 1, 3, 0, 1},
+		{3, 10, 1, 6, 0},
 		{1, 1, 2, 0, 1}
 	};
 
@@ -196,10 +196,10 @@ void PlayLayer::initBoardOfCubes()
 			//for debugging
 			int i = (*_boardOfIndex)[r][c];
 			if (i / TOTAL_CUBE == SPECIAL_COL_CUBE_INDEX) {
-				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeCol[i%4]);
+				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeCol[i % 4]);
 			}
 			else if (i / TOTAL_CUBE == SPECIAL_ROW_CUBE_INDEX) {
-				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeRow[i%4]);
+				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeRow[i % 4]);
 			}
 			else {
 				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[i]);
@@ -238,13 +238,13 @@ Vec2 PlayLayer::winPositionOfCube(int row, int col)
 
 void PlayLayer::checkAndClear()
 {
-	checkAndClearBoardOfIndex(SPECIAL_COL_CUBE_INDEX);
-	checkAndClearBoardOfIndex(SPECIAL_ROW_CUBE_INDEX);
-	checkAndClearBoardOfIndex(0);
+	//checkAndClearBoardOfIndex(SPECIAL_COL_CUBE_INDEX);
+	//checkAndClearBoardOfIndex(SPECIAL_ROW_CUBE_INDEX);
+	checkAndClearBoardOfIndex();
 	clearBoardOfCubes();
 }
 
-void PlayLayer::checkAndClearBoardOfIndex(int mode)
+void PlayLayer::checkAndClearBoardOfIndex()
 {
 	int** leftCubesOfCube = new int* [_numBoardRows];
 	int** rightCubesOfCube = new int* [_numBoardRows];
@@ -273,11 +273,12 @@ void PlayLayer::checkAndClearBoardOfIndex(int mode)
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
 			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 2) {
-				switch (mode)
-				{
-				case 0:
+			//	switch (mode)
+			//	{
+			//	case 0:
 					clearBoardOfIndexRow(r, c, leftCubesOfCube[r][c], rightCubesOfCube[r][c]);
-					break;
+			//		break;
+				/*
 				case SPECIAL_COL_CUBE_INDEX:
 					if ((*_boardOfIndex)[r][c] / 4 == SPECIAL_COL_CUBE_INDEX) {
 						clearBoardOfIndexCol(c);
@@ -289,16 +290,17 @@ void PlayLayer::checkAndClearBoardOfIndex(int mode)
 						clearBoardOfIndexRow(r);
 					}
 					break;
-				
-				}
+				*/
+			//	}
 			}
 			
 			if (upCubesOfCube[r][c] + downCubesOfCube[r][c] >= 2) {
-				switch (mode)
-				{
-				case 0:
+			//	switch (mode)
+			//	{
+			//	case 0:
 					clearBoardOfIndexCol(r, c, upCubesOfCube[r][c], downCubesOfCube[r][c]);
-					break;
+			//		break;
+				/*
 				case SPECIAL_ROW_CUBE_INDEX:
 					if ((*_boardOfIndex)[r][c] / 4 == SPECIAL_ROW_CUBE_INDEX) {
 						clearBoardOfIndexRow(r);
@@ -310,7 +312,8 @@ void PlayLayer::checkAndClearBoardOfIndex(int mode)
 						clearBoardOfIndexCol(c);
 					}
 					break;
-				}
+				*/
+			//	}
 			}
 		}
 	}
@@ -438,13 +441,28 @@ int PlayLayer::numOfCubesDownChain(int row, int col)
 
 void PlayLayer::clearBoardOfIndexRow(int row, int col, int left, int right)
 {
-	for (int r = row, c = col - left; c < col + right; c++) {
+	int i = (*_boardOfIndex)[row][col + right];
+	for (int r = row, c = col - left; c <= col + right; c++) {
+		switch ((*_boardOfIndex)[r][c] / TOTAL_CUBE)
+		{
+		case 0:
+			(*_boardOfIndex)[r][c] = EMPTY;
+			break;
+		case SPECIAL_COL_CUBE_INDEX:
+			clearBoardOfIndexCol(c);
+			break;
+		case SPECIAL_ROW_CUBE_INDEX:
+			clearBoardOfIndexRow(r);
+			break;
+		}
+		/*
 		if ((*_boardOfIndex)[r][c] < TOTAL_CUBE) {
 			(*_boardOfIndex)[r][c] = EMPTY;
 		}
+		*/
 	}
 	if (left + right >= 3) {
-		(*_boardOfIndex)[row][col + right] = (SPECIAL_ROW_CUBE_INDEX * TOTAL_CUBE) + ((*_boardOfIndex)[row][col + right] % TOTAL_CUBE);
+		(*_boardOfIndex)[row][col + right] = (SPECIAL_ROW_CUBE_INDEX * TOTAL_CUBE) + (i % TOTAL_CUBE);
 	}
 	else {
 		(*_boardOfIndex)[row][col + right] = EMPTY;
@@ -453,13 +471,28 @@ void PlayLayer::clearBoardOfIndexRow(int row, int col, int left, int right)
 
 void PlayLayer::clearBoardOfIndexCol(int row, int col, int up, int down)
 {
-	for (int r = row - up, c = col; r < row + down; r++) {
+	int i = (*_boardOfIndex)[row + down][col];
+	for (int r = row - up, c = col; r <= row + down; r++) {
+		switch ((*_boardOfIndex)[r][c] / TOTAL_CUBE)
+		{
+		case 0:
+			(*_boardOfIndex)[r][c] = EMPTY;
+			break;
+		case SPECIAL_COL_CUBE_INDEX:
+			clearBoardOfIndexCol(c);
+			break;
+		case SPECIAL_ROW_CUBE_INDEX:
+			clearBoardOfIndexRow(r);
+			break;
+		}
+		/*
 		if ((*_boardOfIndex)[r][c] < TOTAL_CUBE) {
 			(*_boardOfIndex)[r][c] = EMPTY;
 		}
+		*/
 	}
 	if (up + down >= 3) {
-		(*_boardOfIndex)[row + down][col] = (SPECIAL_COL_CUBE_INDEX * TOTAL_CUBE) + ((*_boardOfIndex)[row + down][col] % TOTAL_CUBE);
+		(*_boardOfIndex)[row + down][col] = (SPECIAL_COL_CUBE_INDEX * TOTAL_CUBE) + (i % TOTAL_CUBE);
 	}
 	else {
 		(*_boardOfIndex)[row + down][col] = EMPTY;
@@ -471,8 +504,9 @@ void PlayLayer::clearBoardOfIndexRow(int row)
 	for (int c = 0; c < _numBoardCols; c++) {
 		switch ((*_boardOfIndex)[row][c] / TOTAL_CUBE)
 		{
-		case 0:
 		case SPECIAL_COL_CUBE_INDEX:
+			clearBoardOfIndexCol(c);
+		case 0:
 		case SPECIAL_ROW_CUBE_INDEX:
 			(*_boardOfIndex)[row][c] = EMPTY;
 			break;
@@ -485,8 +519,10 @@ void PlayLayer::clearBoardOfIndexCol(int col)
 	for (int r = 0; r < _numBoardRows; r++) {
 		switch ((*_boardOfIndex)[r][col] / TOTAL_CUBE)
 		{
-		case 0:
 		case SPECIAL_ROW_CUBE_INDEX:
+			clearBoardOfIndexRow(r);
+			break;
+		case 0:
 		case SPECIAL_COL_CUBE_INDEX:
 			(*_boardOfIndex)[r][col] = EMPTY;
 			break;
@@ -684,4 +720,106 @@ void PlayLayer::swapCubes()
 	_destCube->runAction(Sequence::create(MoveTo::create(time, positonOfSrc),
 										  MoveTo::create(time, positonOfDest), NULL));
 	return;
+}
+
+bool PlayLayer::swappable()
+{
+	int** leftCubesOfCube = new int* [_numBoardRows];
+	int** rightCubesOfCube = new int* [_numBoardRows];
+	int** upCubesOfCube = new int* [_numBoardRows];
+	int** downCubesOfCube = new int* [_numBoardRows];
+
+	for (int r = 0; r < _numBoardRows; r++) {
+		leftCubesOfCube[r] = new int[_numBoardCols] {0};
+		rightCubesOfCube[r] = new int[_numBoardCols] {0};
+		upCubesOfCube[r] = new int[_numBoardCols] {0};
+		downCubesOfCube[r] = new int[_numBoardCols] {0};
+	}
+
+	for (int r = 0; r < _numBoardRows; r++) {
+		for (int c = 0; c < _numBoardCols; c++) {
+			if ((*_boardOfIndex)[r][c] == EMPTY) {
+				continue;
+			}
+			leftCubesOfCube[r][c] = numOfCubesLeftChain(r, c);
+			rightCubesOfCube[r][c] = numOfCubesRightChain(r, c);
+			upCubesOfCube[r][c] = numOfCubesUpChain(r, c);
+			downCubesOfCube[r][c] = numOfCubesDownChain(r, c);
+
+			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 2) {
+				for (int i = 0; i < _numBoardRows; i++) {
+					delete[] leftCubesOfCube[i];
+					delete[] rightCubesOfCube[i];
+					delete[] upCubesOfCube[i];
+					delete[] downCubesOfCube[i];
+
+					leftCubesOfCube[i] = NULL;
+					rightCubesOfCube[i] = NULL;
+					upCubesOfCube[i] = NULL;
+					downCubesOfCube[i] = NULL;
+				}
+
+				delete[] leftCubesOfCube;
+				delete[] rightCubesOfCube;
+				delete[] upCubesOfCube;
+				delete[] downCubesOfCube;
+
+				leftCubesOfCube = NULL;
+				rightCubesOfCube = NULL;
+				upCubesOfCube = NULL;
+				downCubesOfCube = NULL;
+
+				return true;
+			}
+			if (upCubesOfCube[r][c] + downCubesOfCube[r][c] >= 2) {
+				for (int i = 0; i < _numBoardRows; i++) {
+					delete[] leftCubesOfCube[i];
+					delete[] rightCubesOfCube[i];
+					delete[] upCubesOfCube[i];
+					delete[] downCubesOfCube[i];
+
+					leftCubesOfCube[i] = NULL;
+					rightCubesOfCube[i] = NULL;
+					upCubesOfCube[i] = NULL;
+					downCubesOfCube[i] = NULL;
+				}
+
+				delete[] leftCubesOfCube;
+				delete[] rightCubesOfCube;
+				delete[] upCubesOfCube;
+				delete[] downCubesOfCube;
+
+				leftCubesOfCube = NULL;
+				rightCubesOfCube = NULL;
+				upCubesOfCube = NULL;
+				downCubesOfCube = NULL;
+
+				return true;
+			}
+		}
+	}
+
+	for (int i = 0; i < _numBoardRows; i++) {
+		delete[] leftCubesOfCube[i];
+		delete[] rightCubesOfCube[i];
+		delete[] upCubesOfCube[i];
+		delete[] downCubesOfCube[i];
+
+		leftCubesOfCube[i] = NULL;
+		rightCubesOfCube[i] = NULL;
+		upCubesOfCube[i] = NULL;
+		downCubesOfCube[i] = NULL;
+	}
+
+	delete[] leftCubesOfCube;
+	delete[] rightCubesOfCube;
+	delete[] upCubesOfCube;
+	delete[] downCubesOfCube;
+
+	leftCubesOfCube = NULL;
+	rightCubesOfCube = NULL;
+	upCubesOfCube = NULL;
+	downCubesOfCube = NULL;
+
+	return false;
 }

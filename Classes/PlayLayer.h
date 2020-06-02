@@ -51,11 +51,12 @@ private:
 	void checkAndClear();
 	CubeSprite* cubeOfPoint(Vec2* point);
 	void swapCubes();
+	bool swappable();
 
 	void initBoardOfIndex();
 	Vec2 winPositionOfCube(int row, int col);
-	//void checkAndClearBoardOfIndex();
-	void checkAndClearBoardOfIndex(int mode);
+	void checkAndClearBoardOfIndex();
+	//void checkAndClearBoardOfIndex(int mode);
 	void clearBoardOfIndexRow(int row, int col, int left, int right);
 	void clearBoardOfIndexCol(int row, int col, int up, int down);
 	void clearBoardOfIndexCol(int col);
