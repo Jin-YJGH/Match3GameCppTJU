@@ -27,6 +27,14 @@ static const char* cubeCol[TOTAL_CUBE] =
 	"cubeCol4.png"
 };
 
+static const char* cubeRow[TOTAL_CUBE] =
+{
+	"cubeRow1.png",
+	"cubeRow2.png",
+	"cubeRow3.png",
+	"cubeRow4.png"
+};
+
 class CubeSprite : public Sprite
 {
 public:
