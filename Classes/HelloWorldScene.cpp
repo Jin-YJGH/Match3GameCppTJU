@@ -25,12 +25,20 @@
 #include "HelloWorldScene.h"
 #include "SimpleAudioEngine.h"
 #include "PlayLayer.h"
+#include "MenuLayer.h"
+#include "GameEndScene.h"
 
 USING_NS_CC;
 
-Scene* HelloWorld::createScene()
+HelloWorld* HelloWorld::create(int& level)
 {
-    return HelloWorld::create();
+    auto helloWorld = new HelloWorld;
+    if (helloWorld && helloWorld->init(level)) {
+        helloWorld->autorelease();
+        return helloWorld;
+    }
+    CC_SAFE_DELETE(helloWorld);
+    return nullptr;
 }
 
 // Print useful error message instead of segfaulting when files are not there.
@@ -41,7 +49,7 @@ static void problemLoading(const char* filename)
 }
 
 // on "init" you need to initialize your instance
-bool HelloWorld::init()
+bool HelloWorld::init(int& level)
 {
     //////////////////////////////
     // 1. super init first
@@ -56,8 +64,8 @@ bool HelloWorld::init()
     /////////////////////////////
     // 3. add your codes below...
 
-    auto playLayer = PlayLayer::create();
-    this->addChild(playLayer, -1);
+    auto playLayer = PlayLayer::create(level);
+    this->addChild(playLayer);
 
     return true;
 }
@@ -75,3 +83,15 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 
 
 }
+
+/*void HelloWorld::update(float dt)
+{
+    PlayLayer* childPlayLayer = dynamic_cast<PlayLayer*>(this->getChildByName("playLayer"));
+    if (childPlayLayer->getIsEnd() == true) {
+        auto nextScene = dynamic_cast<GameEnd*>(GameEnd::create());
+        nextScene->setPoints(childPlayLayer->getPoints());
+        nextScene->setEndType(childPlayLayer->getEndType());
+        Director::getInstance()->replaceScene(TransitionSlideInT::create(1.0f / 60, nextScene));
+    }
+}
+*/
