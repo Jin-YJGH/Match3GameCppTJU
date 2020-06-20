@@ -72,6 +72,7 @@ bool PlayLayer::init(int& level)
 	_level = level;
 	_numBoardRows = (_level == 1) ? 5 : 7;
 	_numBoardCols = 5;
+	int totalPoints = _level * 1000;
 
 	//bkg and sprite list
 	auto bkg = Sprite::create("bkg.png");
@@ -87,7 +88,7 @@ bool PlayLayer::init(int& level)
 
 	_labelPointStr = Label::createWithTTF(_labelConfig, "POINTS");
 	_labelPointStr->setTextColor(Color4B::BLACK);
-	_labelPointNum = Label::createWithTTF(_labelConfig, std::to_string(_points) + "/" + std::to_string(_level * 1000));
+	_labelPointNum = Label::createWithTTF(_labelConfig, std::to_string(_points) + "/" + std::to_string(totalPoints));
 	_labelPointNum->setTextColor(Color4B::BLACK);
 	_labelStepStr = Label::createWithTTF(_labelConfig, "STEPS");
 	_labelStepStr->setTextColor(Color4B::BLACK);
@@ -108,6 +109,28 @@ bool PlayLayer::init(int& level)
 	addChild(_labelPointNum);
 	addChild(_labelStepStr);
 	addChild(_labelStepNum);
+
+	MenuItemImage* pause = MenuItemImage::create("PAUSE1.png", "PAUSE2.png", 
+		[&](Ref* pSender) {
+			this->pauseSchedulerAndActions();
+		});
+
+	x = origin.x + visibleSize.width * 0.10;
+	y = origin.y + visibleSize.height * 0.65;
+	pause->setPosition(Vec2(x, y));
+
+	MenuItemImage* resume = MenuItemImage::create("RESUME1.png", "RESUME2.png", 
+		[&](Ref* pSender) {
+			this->resumeSchedulerAndActions();
+		});
+
+	x = origin.x + visibleSize.width * 0.10;
+	y = origin.y + visibleSize.height * 0.45;
+	resume->setPosition(Vec2(x, y));
+
+	auto menu = Menu::create(pause, resume, NULL);
+	menu->setPosition(Vec2::ZERO);
+	this->addChild(menu);
 
 	spriteSheet = SpriteFrameCache::getInstance();
 	spriteSheet->addSpriteFramesWithFile("cubeSprites.plist");
