@@ -1,55 +1,85 @@
 #include "SettingScene.h"
 #include "HelloWorldScene.h"
-#include "ui/CocosGUI.h" 
-#include"GUI/CCControlExtension/CCInvocation.h"
+#include "StartScene.h"
 
-using namespace ui;
+using namespace cocos2d::ui;
 using namespace CocosDenshion;
 
-auto volume = Slider::create();
-volume->loadBarTexture("sliderback.png");//音量进度条背景
-volume->loadSlidBallTextures("sliderbutton.png", "sliderbutton.png", "");//滑动块（正常，按下，禁用
-volume->loadProgressBarTexture("silderback.png");//滑动条进度图片，即从左至滑动按钮显示的内容
-volume->setPercent(soundValue * 100);
-volume->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
-volume->addEventListener([=](Ref* pSender, Slider::EventType type) 
-	{
-	if (type == Slider::EventType::ON_PERCENTAGE_CHANGED) 
-	{
-		soundValue = volume->getPercent() * 0.01;
-		log("NOW=%.2f", soundValue);
-		// 设置背景音乐值
-		SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(soundValue);
-		// 设置音效值
-		//SimpleAudioEngine::getInstance()->setEffectsVolume(soundValue);
-		UserDefault::getInstance()->setFloatForKey("soundNum", soundValue);
-		UserDefault::getInstance()->flush();
-	}
-	});
-this->addChild(volume);
-//声音开关
-auto soundControl = ControlSwitch::create
-(
-	Sprite::create("switch-mask.png"),
-	Sprite::create("switch-on.png"),
-	Sprite::create("switch-off.png"),
-	Sprite::create("switch-thumb.png"),
-	Label::createWithSystemFont("On", "Arial-BoldMT", 16),
-	Label::createWithSystemFont("Off", "Arial-BoldMT", 16)
-);
-soundControl->addTargetWithActionForControlEvents(this, cccontrol_selector(HelloWorld::soundSwitch), Control::EventType::VALUE_CHANGED);
-soundControl->setPosition(Vec2(visibleSize.width / 2, visibleSize.height * 0.3));
-this->addChild(soundControl);
+Scene* Setting::createScene()
+{
+	auto scene = Scene::create();
+	auto layer = Setting::create();
+	scene->addChild(layer);
+	return Setting::create();
 }
 
-void HelloWorld::soundSwitch(Ref* psender, Control::EventType controlevent) {
-	auto fSwitch = (ControlSwitch*)psender;
-	if (fSwitch->isOn()) {
-		//SimpleAudioEngine::getInstance()->resumeAllEffects();
-		SimpleAudioEngine::getInstance()->rewindBackgroundMusic();
+bool Setting::init()
+{
+	if (!Scene::init()) {
+		return false;
 	}
-	else {
-		//SimpleAudioEngine::getInstance()->stopAllEffects();
-		SimpleAudioEngine::getInstance()->stopBackgroundMusic();
-	}
+
+	auto visibleSize = Director::getInstance()->getVisibleSize();
+	Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+	auto bkg = cocos2d::LayerColor::create(Color4B::WHITE);
+	this->addChild(bkg);
+
+	MenuItemImage* back = MenuItemImage::create("BACK1.png", "BACK2.png",
+		[&](Ref* pSender) {
+			auto nextScene = Start::createScene();
+			Director::getInstance()->replaceScene(
+				TransitionSlideInT::create(1.0f / 60, nextScene));
+			MenuItem* item = (MenuItem*)pSender;
+		});
+
+	auto x = origin.x + visibleSize.width * 0.10;
+	auto y = origin.y + visibleSize.height * 0.90;
+	back->setPosition(Vec2(x, y));
+	auto backMenu = Menu::create(back, NULL);
+	backMenu->setPosition(Vec2::ZERO);
+	this->addChild(backMenu);
+
+	//auto sprite = Sprite::create("START.png");
+	//sprite->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+	//sprite->setScale(2.0f, 1.1788f);
+	//this->addChild(sprite);
+	//auto back2 = MenuItemImage::create("BACK.png", "BACK.png", CC_CALLBACK_0(Setting::menuCallBack, this));
+	//back2->setPosition(Vec2(900, 50));
+	//back2->setScale(2.0f);
+	//auto menu = Menu::create(back2, NULL);
+	//menu->setPosition(Vec2::ZERO);
+	//this->addChild(menu, 2);
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(
+		FileUtils::getInstance()->fullPathForFilename("bgm.mp3").c_str());
+	SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(0.5f);
+	SimpleAudioEngine::getInstance()->playBackgroundMusic("bgm.mp3", true);
+	createSlider();
+
+	return true;
 }
+
+void Setting::createSlider() {
+	auto visibleSize = Director::getInstance()->getVisibleSize();
+	auto sl = Slider::create();
+	sl->loadBarTexture("SLIDER_TRACK.png");
+	sl->loadSlidBallTextures("BUTTON1.png", "BUTTON2.png", "BUTTON1.png");
+	sl->loadProgressBarTexture("SLIDER_TRACK.png");
+	sl->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+	sl->setPercent(75);
+	sl->addEventListener(CC_CALLBACK_2(Setting::SliderCallBack, this));
+	this->addChild(sl);
+}
+
+void Setting::SliderCallBack(Ref* pSender, Slider::EventType type) {
+	auto item = (Slider*)(pSender);
+	log("%i", item->getPercent());
+	SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(item->getPercent() / 100.0f);
+}
+
+void Setting::menuCallBack() {
+	auto scene = Start::createScene();
+	auto transition = TransitionSlideInL::create(1.0, scene);
+	Director::getInstance()->replaceScene(transition);
+}
+
