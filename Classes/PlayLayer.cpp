@@ -1,5 +1,6 @@
 #include "PlayLayer.h"
 #include "CubeSprite.h"
+#include "GameEndScene.h"
 
 #define BOARD_ROWS (5)
 #define BOARD_COLS (5)
@@ -20,12 +21,14 @@ PlayLayer::PlayLayer()
 	_destCube = NULL;
 	_isActing = false;
 	_needFillin = false;
-	_points = 0;
 	_steps = 100;
 	_labelPointStr = NULL;
 	_labelPointNum = NULL;
 	_labelStepStr = NULL;
-	_labelStepNum = NULL;
+	_points = 0;
+	_isEnd = false;
+	_endType = "NOT END";
+	_level = 1;
 }
 
 PlayLayer::~PlayLayer()
@@ -46,7 +49,18 @@ PlayLayer::~PlayLayer()
 
 }
 
-bool PlayLayer::init()
+PlayLayer* PlayLayer::create(int& level)
+{
+	auto playLayer = new PlayLayer;
+	if (playLayer && playLayer->init(level)) {
+		playLayer->autorelease();
+		return playLayer;
+	}
+	CC_SAFE_DELETE(playLayer);
+	return nullptr;
+}
+
+bool PlayLayer::init(int& level)
 {
 	if (!Layer::init()) {
 		return false;
@@ -54,6 +68,11 @@ bool PlayLayer::init()
 
 	auto visibleSize = Director::getInstance()->getVisibleSize();
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+	_level = level;
+	_numBoardRows = (_level == 1) ? 5 : 7;
+	_numBoardCols = 5;
+	int totalPoints = _level * 1000;
 
 	//bkg and sprite list
 	auto bkg = Sprite::create("bkg.png");
@@ -64,25 +83,26 @@ bool PlayLayer::init()
 
 	TTFConfig _labelConfig;
 	_labelConfig.fontFilePath = "arial.ttf";
-	_labelConfig.fontSize = 48;
+	_labelConfig.fontSize = 36;
+	_labelConfig.bold = true;
 
 	_labelPointStr = Label::createWithTTF(_labelConfig, "POINTS");
 	_labelPointStr->setTextColor(Color4B::BLACK);
-	_labelPointNum = Label::createWithTTF(_labelConfig, std::to_string(_points) + "/1000");
+	_labelPointNum = Label::createWithTTF(_labelConfig, std::to_string(_points) + "/" + std::to_string(totalPoints));
 	_labelPointNum->setTextColor(Color4B::BLACK);
 	_labelStepStr = Label::createWithTTF(_labelConfig, "STEPS");
 	_labelStepStr->setTextColor(Color4B::BLACK);
 	_labelStepNum = Label::createWithTTF(_labelConfig, std::to_string(_steps));
 	_labelStepNum->setTextColor(Color4B::BLACK);
 
-	x = origin.x + visibleSize.width * 0.85;
-	y = origin.y + visibleSize.height * 0.75;
-	_labelPointStr->setPosition(Vec2(x, y));
+	x = origin.x + visibleSize.width * 0.90;
 	y = origin.y + visibleSize.height * 0.65;
+	_labelPointStr->setPosition(Vec2(x, y));
+	y = origin.y + visibleSize.height * 0.55;
 	_labelPointNum->setPosition(Vec2(x, y));
-	y = origin.y + visibleSize.height * 0.50;
-	_labelStepStr->setPosition(Vec2(x, y));
 	y = origin.y + visibleSize.height * 0.40;
+	_labelStepStr->setPosition(Vec2(x, y));
+	y = origin.y + visibleSize.height * 0.30;
 	_labelStepNum->setPosition(Vec2(x, y));
 
 	addChild(_labelPointStr);
@@ -90,13 +110,32 @@ bool PlayLayer::init()
 	addChild(_labelStepStr);
 	addChild(_labelStepNum);
 
+	MenuItemImage* pause = MenuItemImage::create("PAUSE1.png", "PAUSE2.png", 
+		[&](Ref* pSender) {
+			this->pauseSchedulerAndActions();
+		});
+
+	x = origin.x + visibleSize.width * 0.10;
+	y = origin.y + visibleSize.height * 0.65;
+	pause->setPosition(Vec2(x, y));
+
+	MenuItemImage* resume = MenuItemImage::create("RESUME1.png", "RESUME2.png", 
+		[&](Ref* pSender) {
+			this->resumeSchedulerAndActions();
+		});
+
+	x = origin.x + visibleSize.width * 0.10;
+	y = origin.y + visibleSize.height * 0.45;
+	resume->setPosition(Vec2(x, y));
+
+	auto menu = Menu::create(pause, resume, NULL);
+	menu->setPosition(Vec2::ZERO);
+	this->addChild(menu);
+
 	spriteSheet = SpriteFrameCache::getInstance();
 	spriteSheet->addSpriteFramesWithFile("cubeSprites.plist");
 	spriteSheet->addSpriteFramesWithFile("cubeCol.plist");
 	spriteSheet->addSpriteFramesWithFile("cubeRow.plist");
-
-	_numBoardRows = BOARD_ROWS;
-	_numBoardCols = BOARD_COLS;
 
 	_boardLeftTopX = (visibleSize.width - _numBoardCols * CubeSprite::getCubeLength() - (_numBoardCols - 1) * CUBE_GAP) / 2;
 	_boardLeftTopY = (visibleSize.height + _numBoardRows * CubeSprite::getCubeLength() + (_numBoardRows - 1) * CUBE_GAP) / 2;
@@ -119,6 +158,7 @@ bool PlayLayer::init()
 		}
 	}
 
+	std::srand(time(NULL));
 	initBoardOfIndex();
 	initBoardOfCubes();
 	this->scheduleUpdate();
@@ -134,9 +174,26 @@ bool PlayLayer::init()
 
 void PlayLayer::update(float dt)
 {
-	if (_points >= 1000 && _steps >= 0) {
+	if (!swappable(_boardOfIndex) || (_steps < 0 && _points < _level * 1000)) {
 		PlayLayer::pauseSchedulerAndActions();
+		_endType = "GAME OVER";
+		//_isEnd = true;
+		GameEnd* nextScene = GameEnd::create(_endType, _points, _level);
+		nextScene->setEndType(_endType);
+		Director::getInstance()->replaceScene(
+			TransitionSlideInT::create(1.0f / 60, nextScene));
 	}
+	
+	if (_points >= _level * 1000 && _steps >= 0) {
+		PlayLayer::pauseSchedulerAndActions();
+		_endType = "YOU WIN";
+		//_isEnd = true;
+		GameEnd* nextScene = GameEnd::create(_endType, _points, _level);
+		nextScene->setEndType(_endType);
+		Director::getInstance()->replaceScene(
+			TransitionSlideInT::create(1.0f / 60, nextScene));
+	}
+
 	if (_isActing) {
 		_isActing = false;
 		
@@ -177,9 +234,29 @@ void PlayLayer::initBoardOfIndex()
 		{1, 1, 2, 0, 1}
 	};
 
+	std::vector<std::vector<int> >* initBoard = new std::vector<std::vector<int> >(_numBoardRows);
+	std::vector<std::vector<int> >::iterator rInitBoard = initBoard->begin();
+	for (; rInitBoard != initBoard->end(); rInitBoard++) {
+		for (int c = 0; c < _numBoardCols; c++) {
+			rInitBoard->push_back(EMPTY);
+		}
+	}
+	generateInitBoardIndex(initBoard);
+
+	/*
+	std::stringstream initBoardStr;
+	for (int i = 0; i < _numBoardRows; i++) {
+		for (int j = 0; j < _numBoardCols; j++) {
+			initBoardStr << (*initBoard)[i][j] << ' ';
+		}
+		initBoardStr << std::endl;
+	}
+	MessageBox(initBoardStr.str().c_str(), "InitBoard");
+	*/
+
 	for (int row = 0; row < _numBoardRows; row++) {
 		for (int col = 0; col < _numBoardCols; col++) {
-			(*_boardOfIndex)[row][col] = testBoard[row][col];
+			(*_boardOfIndex)[row][col] = (*initBoard)[row][col];
 		}
 	}
 }
@@ -194,6 +271,7 @@ void PlayLayer::initBoardOfCubes()
 			//(*_boardOfCubes)[r][c]->setImgIndex((*_boardOfIndex)[r][c]);
 
 			//for debugging
+			/*
 			int i = (*_boardOfIndex)[r][c];
 			if (i / TOTAL_CUBE == SPECIAL_COL_CUBE_INDEX) {
 				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeCol[i % 4]);
@@ -204,9 +282,10 @@ void PlayLayer::initBoardOfCubes()
 			else {
 				(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[i]);
 			}
+			*/
 			///////////////
 
-			
+			(*_boardOfCubes)[r][c]->initWithSpriteFrameName(cubeSprites[(*_boardOfIndex)[r][c]]);
 			(*_boardOfCubes)[r][c]->setPosition(winPositionOfCube(r, c));
 
 			this->addChild((*_boardOfCubes)[r][c]);
@@ -263,10 +342,10 @@ void PlayLayer::checkAndClearBoardOfIndex()
 			if ((*_boardOfIndex)[r][c] == EMPTY) {
 				continue;
 			}
-			leftCubesOfCube[r][c] = numOfCubesLeftChain(r, c);
-			rightCubesOfCube[r][c] = numOfCubesRightChain(r, c);
-			upCubesOfCube[r][c] = numOfCubesUpChain(r, c);
-			downCubesOfCube[r][c] = numOfCubesDownChain(r, c);
+			leftCubesOfCube[r][c] = numOfCubesLeftChain(r, c, _boardOfIndex);
+			rightCubesOfCube[r][c] = numOfCubesRightChain(r, c, _boardOfIndex);
+			upCubesOfCube[r][c] = numOfCubesUpChain(r, c, _boardOfIndex);
+			downCubesOfCube[r][c] = numOfCubesDownChain(r, c, _boardOfIndex);
 		}
 	}
 
@@ -375,12 +454,12 @@ void PlayLayer::clearBoardOfCubes()
 	
 }
 
-int PlayLayer::numOfCubesLeftChain(int row, int col)
+int PlayLayer::numOfCubesLeftChain(int row, int col, std::vector<std::vector<int> >* board)
 {
 	int numOfCubes = 0;
 	int leftNeighbourCol = col - 1;
 	while (leftNeighbourCol >= 0) {
-		if (((*_boardOfIndex)[row][leftNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+		if (((*board)[row][leftNeighbourCol] % TOTAL_CUBE) == ((*board)[row][col] % TOTAL_CUBE)) {
 			numOfCubes++;
 		}
 		else {
@@ -391,12 +470,12 @@ int PlayLayer::numOfCubesLeftChain(int row, int col)
 	return numOfCubes;
 }
 
-int PlayLayer::numOfCubesRightChain(int row, int col)
+int PlayLayer::numOfCubesRightChain(int row, int col, std::vector<std::vector<int> >* board)
 {
 	int numOfCubes = 0;
 	int rightNeighbourCol = col + 1;
 	while (rightNeighbourCol < _numBoardCols) {
-		if (((*_boardOfIndex)[row][rightNeighbourCol] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+		if (((*board)[row][rightNeighbourCol] % TOTAL_CUBE) == ((*board)[row][col] % TOTAL_CUBE)) {
 			numOfCubes++;
 		}
 		else {
@@ -407,12 +486,12 @@ int PlayLayer::numOfCubesRightChain(int row, int col)
 	return numOfCubes;
 }
 
-int PlayLayer::numOfCubesUpChain(int row, int col)
+int PlayLayer::numOfCubesUpChain(int row, int col, std::vector<std::vector<int> >* board)
 {
 	int numOfCubes = 0;
 	int upNeighbourRow = row - 1;
 	while (upNeighbourRow >= 0) {
-		if (((*_boardOfIndex)[upNeighbourRow][col] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+		if (((*board)[upNeighbourRow][col] % TOTAL_CUBE) == ((*board)[row][col] % TOTAL_CUBE)) {
 			numOfCubes++;
 		}
 		else {
@@ -423,12 +502,12 @@ int PlayLayer::numOfCubesUpChain(int row, int col)
 	return numOfCubes;
 }
 
-int PlayLayer::numOfCubesDownChain(int row, int col)
+int PlayLayer::numOfCubesDownChain(int row, int col, std::vector<std::vector<int> >* board)
 {
 	int numOfCubes = 0;
 	int downNeighbourRow = row + 1;
 	while (downNeighbourRow < _numBoardRows) {
-		if (((*_boardOfIndex)[downNeighbourRow][col] % TOTAL_CUBE) == ((*_boardOfIndex)[row][col] % TOTAL_CUBE)) {
+		if (((*board)[downNeighbourRow][col] % TOTAL_CUBE) == ((*board)[row][col] % TOTAL_CUBE)) {
 			numOfCubes++;
 		}
 		else {
@@ -691,10 +770,10 @@ void PlayLayer::swapCubes()
 
 	std::swap((*_boardOfIndex)[srcRow][srcCol], (*_boardOfIndex)[destRow][destCol]);
 
-	if  ((numOfCubesLeftChain(srcRow, srcCol) + numOfCubesRightChain(srcRow, srcCol) >= 2) ||
-		((numOfCubesUpChain(srcRow, srcCol) + numOfCubesDownChain(srcRow, srcCol)) >= 2) ||
-		((numOfCubesLeftChain(destRow, destCol) + numOfCubesRightChain(destRow, destCol)) >= 2) ||
-		((numOfCubesUpChain(destRow, destCol) + numOfCubesDownChain(destRow, destCol)) >= 2)) {
+	if  ((numOfCubesLeftChain(srcRow, srcCol, _boardOfIndex) + numOfCubesRightChain(srcRow, srcCol, _boardOfIndex) >= 2) ||
+		((numOfCubesUpChain(srcRow, srcCol, _boardOfIndex) + numOfCubesDownChain(srcRow, srcCol, _boardOfIndex)) >= 2) ||
+		((numOfCubesLeftChain(destRow, destCol, _boardOfIndex) + numOfCubesRightChain(destRow, destCol, _boardOfIndex)) >= 2) ||
+		((numOfCubesUpChain(destRow, destCol, _boardOfIndex) + numOfCubesDownChain(destRow, destCol, _boardOfIndex)) >= 2)) {
 
 		(*_boardOfCubes)[srcRow][srcCol] = _destCube;
 		(*_boardOfCubes)[srcRow][srcCol]->setRow(srcRow);
@@ -722,104 +801,162 @@ void PlayLayer::swapCubes()
 	return;
 }
 
-bool PlayLayer::swappable()
+void PlayLayer::generateInitBoardIndex(std::vector<std::vector<int> >* board)
 {
-	int** leftCubesOfCube = new int* [_numBoardRows];
-	int** rightCubesOfCube = new int* [_numBoardRows];
-	int** upCubesOfCube = new int* [_numBoardRows];
-	int** downCubesOfCube = new int* [_numBoardRows];
-
-	for (int r = 0; r < _numBoardRows; r++) {
-		leftCubesOfCube[r] = new int[_numBoardCols] {0};
-		rightCubesOfCube[r] = new int[_numBoardCols] {0};
-		upCubesOfCube[r] = new int[_numBoardCols] {0};
-		downCubesOfCube[r] = new int[_numBoardCols] {0};
-	}
+	bool twoSameInRow = false;
+	bool twoSameInCol = false;
+	int colIndex;
+	int rowIndex;
 
 	for (int r = 0; r < _numBoardRows; r++) {
 		for (int c = 0; c < _numBoardCols; c++) {
-			if ((*_boardOfIndex)[r][c] == EMPTY) {
-				continue;
-			}
-			leftCubesOfCube[r][c] = numOfCubesLeftChain(r, c);
-			rightCubesOfCube[r][c] = numOfCubesRightChain(r, c);
-			upCubesOfCube[r][c] = numOfCubesUpChain(r, c);
-			downCubesOfCube[r][c] = numOfCubesDownChain(r, c);
-
-			if (leftCubesOfCube[r][c] + rightCubesOfCube[r][c] >= 2) {
-				for (int i = 0; i < _numBoardRows; i++) {
-					delete[] leftCubesOfCube[i];
-					delete[] rightCubesOfCube[i];
-					delete[] upCubesOfCube[i];
-					delete[] downCubesOfCube[i];
-
-					leftCubesOfCube[i] = NULL;
-					rightCubesOfCube[i] = NULL;
-					upCubesOfCube[i] = NULL;
-					downCubesOfCube[i] = NULL;
+			twoSameInRow = false;
+			twoSameInCol = false;
+			if (r > 1) {
+				if ((*board)[r - 1][c] == (*board)[r - 2][c]) {
+					colIndex = (*board)[r - 1][c];
+					twoSameInCol = true;
 				}
-
-				delete[] leftCubesOfCube;
-				delete[] rightCubesOfCube;
-				delete[] upCubesOfCube;
-				delete[] downCubesOfCube;
-
-				leftCubesOfCube = NULL;
-				rightCubesOfCube = NULL;
-				upCubesOfCube = NULL;
-				downCubesOfCube = NULL;
-
-				return true;
 			}
-			if (upCubesOfCube[r][c] + downCubesOfCube[r][c] >= 2) {
-				for (int i = 0; i < _numBoardRows; i++) {
-					delete[] leftCubesOfCube[i];
-					delete[] rightCubesOfCube[i];
-					delete[] upCubesOfCube[i];
-					delete[] downCubesOfCube[i];
-
-					leftCubesOfCube[i] = NULL;
-					rightCubesOfCube[i] = NULL;
-					upCubesOfCube[i] = NULL;
-					downCubesOfCube[i] = NULL;
+			if (c > 1) {
+				if ((*board)[r][c - 1] == (*board)[r][c - 2]) {
+					rowIndex = (*board)[r][c - 1];
+					twoSameInRow = true;
 				}
-
-				delete[] leftCubesOfCube;
-				delete[] rightCubesOfCube;
-				delete[] upCubesOfCube;
-				delete[] downCubesOfCube;
-
-				leftCubesOfCube = NULL;
-				rightCubesOfCube = NULL;
-				upCubesOfCube = NULL;
-				downCubesOfCube = NULL;
-
-				return true;
+			}
+			if (twoSameInCol && twoSameInRow) {
+				(*board)[r][c] = indexExcept(colIndex, rowIndex);
+			}
+			else if (twoSameInCol) {
+				(*board)[r][c] = indexExcept(colIndex);
+			}
+			else if (twoSameInRow) {
+				(*board)[r][c] = indexExcept(rowIndex);
+			}
+			else {
+				(*board)[r][c] = rand() % TOTAL_CUBE;
 			}
 		}
 	}
+	if (swappable(board)) {
+		return;
+	}
+	else {
+		generateInitBoardIndex(board);
+	}
+}
 
-	for (int i = 0; i < _numBoardRows; i++) {
-		delete[] leftCubesOfCube[i];
-		delete[] rightCubesOfCube[i];
-		delete[] upCubesOfCube[i];
-		delete[] downCubesOfCube[i];
+int PlayLayer::indexExcept(int given)
+{
+	std::vector<int> indexes = { 0, 1, 2, 3 };
+	std::vector<int> legalIndexes;
+	for (int i = 0; i < TOTAL_CUBE; i++) {
+		if (indexes[i] != given) {
+			legalIndexes.push_back(indexes[i]);
+		}
+	}
+	int index = legalIndexes[rand() % legalIndexes.size()];
+	return index;
+}
 
-		leftCubesOfCube[i] = NULL;
-		rightCubesOfCube[i] = NULL;
-		upCubesOfCube[i] = NULL;
-		downCubesOfCube[i] = NULL;
+int PlayLayer::indexExcept(int given1, int given2)
+{
+	std::vector<int> indexes = { 0, 1, 2, 3 };
+	std::vector<int> legalIndexes;
+	for (int i = 0; i < TOTAL_CUBE; i++) {
+		if (indexes[i] != given1 && indexes[i] != given2) {
+			legalIndexes.push_back(indexes[i]);
+		}
+	}
+	int index = legalIndexes[rand() % legalIndexes.size()];
+	return index;
+}
+
+bool PlayLayer::swappable(std::vector<std::vector<int> >* board)
+{
+	for (int r = 0; r < _numBoardRows - 1; r++) {
+		for (int c = 0; c < _numBoardCols - 1; c++) {
+			std::swap((*board)[r][c], (*board)[r][c + 1]);
+			if (numOfCubesLeftChain(r, c, board) + numOfCubesRightChain(r, c, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r][c + 1]);
+				return true;
+			}
+			if (numOfCubesUpChain(r, c, board) + numOfCubesDownChain(r, c, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r][c + 1]);
+				return true;
+			}
+			if (numOfCubesLeftChain(r, c + 1, board) + numOfCubesRightChain(r, c + 1, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r][c + 1]);
+				return true;
+			}
+			if (numOfCubesUpChain(r, c + 1, board) + numOfCubesDownChain(r, c + 1, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r][c + 1]);
+				return true;
+			}
+			std::swap((*board)[r][c], (*board)[r][c + 1]);
+
+			std::swap((*board)[r][c], (*board)[r + 1][c]);
+			if (numOfCubesLeftChain(r, c, board) + numOfCubesRightChain(r, c, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r + 1][c]);
+				return true;
+			}
+			if (numOfCubesUpChain(r, c, board) + numOfCubesDownChain(r, c, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r + 1][c]);
+				return true;
+			}
+			if (numOfCubesLeftChain(r + 1, c, board) + numOfCubesRightChain(r + 1, c, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r + 1][c]);
+				return true;
+			}
+			if (numOfCubesUpChain(r + 1, c, board) + numOfCubesDownChain(r + 1, c, board) >= 2) {
+				std::swap((*board)[r][c], (*board)[r + 1][c]);
+				return true;
+			}
+			std::swap((*board)[r][c], (*board)[r + 1][c]);
+		}
 	}
 
-	delete[] leftCubesOfCube;
-	delete[] rightCubesOfCube;
-	delete[] upCubesOfCube;
-	delete[] downCubesOfCube;
+	for (int r = 0, c = _numBoardCols - 1; r < _numBoardRows - 1; r++) {
+		std::swap((*board)[r + 1][c], (*board)[r + 1][c]);
+		if (numOfCubesLeftChain(r, c, board) + numOfCubesRightChain(r, c, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r + 1][c]);
+			return true;
+		}
+		if (numOfCubesUpChain(r, c, board) + numOfCubesDownChain(r, c, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r + 1][c]);
+			return true;
+		}
+		if (numOfCubesLeftChain(r + 1, c, board) + numOfCubesRightChain(r + 1, c, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r + 1][c]);
+			return true;
+		}
+		if (numOfCubesUpChain(r + 1, c, board) + numOfCubesDownChain(r + 1, c, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r + 1][c]);
+			return true;
+		}
+		std::swap((*board)[r + 1][c], (*board)[r + 1][c]);
+	}
 
-	leftCubesOfCube = NULL;
-	rightCubesOfCube = NULL;
-	upCubesOfCube = NULL;
-	downCubesOfCube = NULL;
+	for (int r = _numBoardRows - 1, c = 0; c < _numBoardCols - 1; c++) {
+		std::swap((*board)[r][c], (*board)[r][c + 1]);
+		if (numOfCubesLeftChain(r, c, board) + numOfCubesRightChain(r, c, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r][c + 1]);
+			return true;
+		}
+		if (numOfCubesUpChain(r, c, board) + numOfCubesDownChain(r, c, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r][c + 1]);
+			return true;
+		}
+		if (numOfCubesLeftChain(r, c + 1, board) + numOfCubesRightChain(r, c + 1, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r][c + 1]);
+			return true;
+		}
+		if (numOfCubesUpChain(r, c + 1, board) + numOfCubesDownChain(r, c + 1, board) >= 2) {
+			std::swap((*board)[r][c], (*board)[r][c + 1]);
+			return true;
+		}
+		std::swap((*board)[r][c], (*board)[r][c + 1]);
+	}
 
 	return false;
 }

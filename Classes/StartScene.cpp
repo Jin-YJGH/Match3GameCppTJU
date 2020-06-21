@@ -1,5 +1,6 @@
 #include "StartScene.h"
 #include "HelloWorldScene.h"
+#include "LevelChooseScene.h"
 
 USING_NS_CC;
 
@@ -53,7 +54,7 @@ bool Start::init()
 
 void Start::menuStartCallback(cocos2d::Ref* pSender)
 {
-    auto nextScene = HelloWorld::createScene();
+    auto nextScene = LevelChoose::createScene();
     Director::getInstance()->replaceScene(
         TransitionSlideInT::create(1.0f / 60, nextScene));
     MenuItem* item = (MenuItem*)pSender;
